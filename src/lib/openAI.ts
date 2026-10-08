@@ -49,6 +49,7 @@ export async function generateTrainingPlan(
   const openai = new OpenAI({
     apiKey,
     baseURL: "https://openrouter.ai/api/v1",
+    // baseURL: "deepseek/deepseek-v4-flash:free",
     defaultHeaders: {
       "HTTP-Referer": "https://yourworkoutplanner.vercel.app/",
       "X-Title": "workout plan generator",
@@ -59,7 +60,7 @@ export async function generateTrainingPlan(
   const prompt = buildPrompt(normalizedProfile);
 
   const completion = await openai.chat.completions.create({
-    model: "openrouter/owl-alpha",
+    model: process.env.OPENROUTER_MODEL ?? "apodex/apodex-1.1-mini:free",
     messages: [
       {
         role: "system",
@@ -176,7 +177,7 @@ function buildPrompt(profile: UserProfile): string {
   - ${profile.injuries ? `Avoid exercises that could aggravate: ${profile.injuries}` : ""}
   - Provide exercise alternatives where appropriate
   - Make it progressive and suitable for ${experienceMap[profile.experience] || profile.experience} level
-  
+
   Return ONLY the JSON object (no markdown, no extra text).
   `;
 }

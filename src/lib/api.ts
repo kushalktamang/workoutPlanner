@@ -1,26 +1,41 @@
 import type { UserProfileForm } from "../types";
 
-const TIMEOUT_MS = 120000;
+const TIMEOUT_MS = 120_000;
 
 const fetchWithTimeout = async (
   url: string,
   options: RequestInit = {},
+  timeoutMs: number | null = TIMEOUT_MS,
 ): Promise<Response> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const controller = timeoutMs === null ? undefined : new AbortController();
+  const timeoutId =
+    timeoutMs === null
+      ? undefined
+      : setTimeout(() => controller?.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, {
+      ...options,
+      ...(controller && { signal: controller.signal }),
+    });
   } finally {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
   }
 };
 
-async function post(path: string, body: object) {
-  const res = await fetchWithTimeout(`/api${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+async function post(
+  path: string,
+  body: object,
+  timeoutMs: number | null = TIMEOUT_MS,
+) {
+  const res = await fetchWithTimeout(
+    `/api${path}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    timeoutMs,
+  );
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || `HTTP ${res.status}: Request failed`);
@@ -41,9 +56,8 @@ export const api = {
   saveProfile: (profile: UserProfileForm) => {
     return post("/profile", profile);
   },
-  generatePlan: (profileId: string) => {
-    return post("/plan/generate", { profileId });
-  },
+  generatePlan: (profileId: string) =>
+    post("/plan/generate", { profileId }, null),
   getCurrentPlan: (profileId: string) => {
     return get(`/plan/current?profileId=${profileId}`);
   },
